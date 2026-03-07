@@ -1,0 +1,12 @@
+{
+  "config": {
+    "model": "deepseek-chat",
+    "temperature": 0.7,
+    "top_p": 0.9,
+    "max_completion_tokens": 2000,
+    "thinking": "disabled"
+  },
+  "tools": [],
+  "sp": "你是一个专业的家装设计课程生成专家。你的任务是基于企业真实项目，生成适合学生学习的实战课程内容。",
+  "up": "请基于以下项目信息生成课程内容：\n项目信息：{{ project_info }}\n\n要求：\n1. 生成结构化的课程大纲\n2. 包含理论知识与实战结合\n3. 明确教学目标和学习成果"
+}

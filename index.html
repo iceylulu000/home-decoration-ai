@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>家装产教融合AI闭环工作流</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>家装产教融合AI闭环工作流</h1>
+            <p class="subtitle">企业端 - 学生端 - AI点评</p>
+        </header>
+        <div class="stage-nav">
+            <div class="stage-tab active" data-stage="1" id="tab1">
+                <span class="stage-num">1</span>
+                <span class="stage-title">企业端</span>
+            </div>
+            <div class="stage-tab" data-stage="2" id="tab2">
+                <span class="stage-num">2</span>
+                <span class="stage-title">学生端</span>
+            </div>
+            <div class="stage-tab" data-stage="3" id="tab3">
+                <span class="stage-num">3</span>
+                <span class="stage-title">AI点评</span>
+            </div>
+        </div>
+        <div class="stage-content" id="stage1">
+            <div class="card">
+                <h2>上传企业项目资料</h2>
+                <form id="projectForm" enctype="multipart/form-data">
+                    <div class="upload-area" id="projectUploadArea">
+                        <input type="file" id="projectFile" name="file" accept="*" hidden>
+                        <div class="upload-placeholder">
+                            <span class="upload-icon">📁</span>
+                            <p>点击或拖拽企业项目资料到此处</p>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary" id="projectSubmitBtn" disabled>
+                        生成教学材料和任务
+                    </button>
+                </form>
+            </div>
+            <div class="result-container" id="courseResult" style="display:none">
+                <h2>生成的教学材料</h2>
+                <div class="result-content" id="courseContent"></div>
+            </div>
+            <div class="result-container" id="tasksResult" style="display:none">
+                <h2>学生实战任务列表</h2>
+                <div class="tasks-list" id="tasksList"></div>
+                <button class="btn btn-primary" onclick="goToStage2()">
+                    进入学生端
+                </button>
+            </div>
+        </div>
+        <div class="stage-content" id="stage2" style="display:none">
+            <div class="card">
+                <h2>提交作业</h2>
+                <div class="task-selector">
+                    <label>选择任务：</label>
+                    <select id="taskSelect">
+                        <option value="">请选择任务</option>
+                    </select>
+                </div>
+                <form id="homeworkForm" enctype="multipart/form-data">
+                    <div class="upload-area" id="homeworkUploadArea">
+                        <input type="file" id="homeworkFile" name="file" accept=".pdf,.doc,.docx,.jpg,.png" hidden>
+                        <div class="upload-placeholder">
+                            <span class="upload-icon">📝</span>
+                            <p>点击或拖拽作业文件到此处</p>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary" id="homeworkSubmitBtn" disabled>
+                        提交作业
+                    </button>
+                </form>
+            </div>
+            <div class="result-container" id="submissionsResult" style="display:none">
+                <h2>已提交作业列表</h2>
+                <div class="submissions-list" id="submissionsList"></div>
+                <button class="btn btn-primary" onclick="generateReport()">
+                    生成点评报告
+                </button>
+            </div>
+        </div>
+        <div class="stage-content" id="stage3" style="display:none">
+            <div class="result-container">
+                <h2>AI作业点评报告</h2>
+                <div class="result-content" id="reportContent"></div>
+                <button class="btn btn-secondary" onclick="resetWorkflow()">
+                    开始新的工作流
+                </button>
+            </div>
+        </div>
+    </div>
+    <script src="/static/js/script.js"></script>
+</body>
+</html>
