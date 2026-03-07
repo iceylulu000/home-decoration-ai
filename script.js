@@ -1,4 +1,4 @@
- <script>
+    <script>
         // ===== 工具函数 =====
         function safeSetText(id, text) {
             const el = document.getElementById(id);
@@ -77,10 +77,18 @@
                 });
                 const result = await response.json();
                 if (result.success) {
+                    // 同步到 stage1
                     safeSetText('courseContent', result.data.course_content);
                     document.getElementById('courseResult').style.display = 'block';
                     renderTasks(result.data.student_tasks);
                     document.getElementById('tasksResult').style.display = 'block';
+                    
+                    // 同步到 stage2（教学端）
+                    safeSetText('courseContent2', result.data.course_content);
+                    document.getElementById('courseResult2').style.display = 'block';
+                    renderTasksToStage2(result.data.student_tasks);
+                    document.getElementById('tasksResult2').style.display = 'block';
+                    
                     document.getElementById('status1').textContent = '已完成';
                     document.getElementById('tab1').classList.add('completed');
                     fetch('/get_state')
@@ -115,9 +123,33 @@
             ).join('');
         }
 
+        // ===== 渲染任务到教学端（新增） =====
+        function renderTasksToStage2(tasks) {
+            const tasksList = document.getElementById('tasksList2');
+            tasksList.innerHTML = tasks.map(task => 
+                '<div class="task-item">' +
+                    '<div class="task-id">' + task['任务ID'] + '</div>' +
+                    '<div class="task-name">' + task['任务名称'] + '</div>' +
+                    '<div class="task-desc">' + task['任务描述'] + '</div>' +
+                    '<div class="task-meta">' +
+                        '<span>难度: ' + task['难度'] + '</span> | ' +
+                        '<span>截止时间: ' + task['截止时间'] + '</span>' +
+                    '</div>' +
+                '</div>'
+            ).join('');
+        }
+
+        // ===== 跳转到教学端（新增） =====
         function goToStage2() {
             currentStage = 2;
             updateStageDisplay();
+        }
+
+        // ===== 跳转到学生端（新增） =====
+        function goToStage3() {
+            currentStage = 3;
+            updateStageDisplay();
+            // 填充任务选择器
             document.getElementById('taskSelect').innerHTML = 
                 '<option value="">请选择任务</option>' +
                 workflowState.student_tasks.map(task => 
@@ -235,7 +267,7 @@
             document.getElementById('submissionsResult').style.display = 'block';
         }
 
-        // ===== 生成报告功能 =====
+        // ===== 生成报告功能（修改） =====
         async function generateReport() {
             if (workflowState.submissions.length === 0) {
                 alert('还没有提交任何作业');
@@ -251,10 +283,7 @@
                 const result = await response.json();
                 if (result.success) {
                     safeSetText('reportContent', result.report);
-                    currentStage = 3;
-                    updateStageDisplay();
-                    document.getElementById('status2').textContent = '已完成';
-                    document.getElementById('tab2').classList.add('completed');
+                    document.getElementById('reportResult').style.display = 'block';
                 } else {
                     alert('生成失败: ' + result.error);
                 }
@@ -308,9 +337,9 @@
             });
         });
 
-        // ===== 生成标准资料库功能（新增） =====
+        // ===== 生成标准资料库功能（修改） =====
         function generateMaterials() {
-            const resultArea = document.getElementById('courseContent');
+            const resultArea = document.getElementById('courseContent2');
             
             resultArea.innerHTML = '<p>正在生成标准资料库...</p>';
             
@@ -362,7 +391,6 @@
                 `;
                 
                 resultArea.innerHTML = materials;
-                document.getElementById('courseResult').style.display = 'block';
             }, 1500);
         }
     </script>
