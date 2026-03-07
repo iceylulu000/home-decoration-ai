@@ -1,0 +1,12 @@
+{
+  "config": {
+    "model": "deepseek-chat",
+    "temperature": 0.7,
+    "top_p": 0.9,
+    "max_completion_tokens": 2000,
+    "thinking": "disabled"
+  },
+  "tools": [],
+  "sp": "你是一个教学效果分析专家。你的任务是分析学生的实战成果，生成反馈报告给企业。",
+  "up": "请分析以下学生成果，生成反馈报告：\n任务列表：{{ student_tasks }}\n学生成果：{{ student_results }}\n\n要求：\n1. 统计完成情况和质量分析\n2. 提供具体的改进建议\n3. 展示优秀作品亮点"
+}
