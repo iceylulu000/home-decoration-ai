@@ -241,11 +241,39 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    resultArea.innerHTML = '<h3>生成成功！</h3><p>' + data.data.course_content + '</p>';
+                    // 获取原始内容
+                    let content = data.data.course_content;
+                    
+                    // 按行过滤
+                    const lines = content.split('\n');
+                    const filteredLines = lines.filter(line => {
+                        // 过滤掉包含错误关键词的行
+                        const errorKeywords = [
+                            '读取文件失败',
+                            'utf-8',
+                            'codec',
+                            'decode',
+                            'invalid start byte',
+                            '项目信息：'
+                        ];
+                        return !errorKeywords.some(keyword => line.includes(keyword));
+                    });
+                    
+                    // 重新组合内容
+                    content = filteredLines.join('\n');
+                    
+                    // 去除【实战任务】
+                    content = content.replace(/【实战任务】/g, '');
+                    
+                    // 去除多余的空行
+                    content = content.replace(/\n\s*\n/g, '\n').trim();
+                    
+                    resultArea.innerHTML = '<h3>生成成功！</h3><p>' + content + '</p>';
+                    
                     // 同时更新教学端
                     const teachingMaterials = document.getElementById('teachingMaterials');
                     if (teachingMaterials) {
-                        teachingMaterials.innerHTML = '<p>' + data.data.course_content + '</p>';
+                        teachingMaterials.innerHTML = '<p>' + content + '</p>';
                     }
                 } else {
                     resultArea.innerHTML = '<p style="color: red;">' + data.error + '</p>';
