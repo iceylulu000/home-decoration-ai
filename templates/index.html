@@ -117,6 +117,35 @@
             line-height: 1.6;
         }
         
+        /* 新增样式 */
+        .materials-section {
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            border-left: 4px solid #667eea;
+            margin-top: 15px;
+        }
+        
+        .section-title {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        
+        .section-content {
+            color: #333;
+            line-height: 1.6;
+            font-size: 14px;
+        }
+        
+        .generate-area {
+            margin-top: 15px;
+        }
+        
+        .generate-area button {
+            width: 100%;
+        }
+        
         .task-list {
             list-style: none;
         }
@@ -158,14 +187,25 @@
                 <div id="courseContent" class="result-area"></div>
             </div>
             
-           <div class="stage" id="stage2">
-    <h2>第二阶段：教学端</h2>
-    <p>查看AI生成的教学内容和学生任务</p>
-    <div class="generate-area">
-        <button onclick="generateMaterials()">生成标准资料库</button>
-    </div>
-    <div id="teachingMaterials" class="result-area"></div>
-</div>
+            <div class="stage" id="stage2">
+                <h2>第二阶段：教学端</h2>
+                <p>查看AI生成的教学内容和标准资料库</p>
+                <div class="result-area">
+                    <h3>教学材料与标准资料库</h3>
+                    
+                    <!-- 企业项目资料分析部分 -->
+                    <div class="materials-section">
+                        <h4 class="section-title">企业项目资料分析</h4>
+                        <div id="teachingMaterials" class="section-content"></div>
+                    </div>
+                    
+                    <!-- 标准资料库部分 -->
+                    <div class="generate-area" style="margin-top: 20px;">
+                        <button onclick="generateMaterials()">生成标准资料库</button>
+                    </div>
+                    <div id="standardMaterials" class="materials-section" style="margin-top: 20px;"></div>
+                </div>
+            </div>
             
             <div class="stage" id="stage3">
                 <h2>第三阶段：学生端</h2>
@@ -180,7 +220,6 @@
     </div>
     
     <script>
-        // 简单的JavaScript功能
         function uploadProject() {
             const fileInput = document.getElementById('projectFile');
             const resultArea = document.getElementById('courseContent');
@@ -203,6 +242,11 @@
             .then(data => {
                 if (data.success) {
                     resultArea.innerHTML = '<h3>生成成功！</h3><p>' + data.data.course_content + '</p>';
+                    // 同时更新教学端
+                    const teachingMaterials = document.getElementById('teachingMaterials');
+                    if (teachingMaterials) {
+                        teachingMaterials.innerHTML = '<p>' + data.data.course_content + '</p>';
+                    }
                 } else {
                     resultArea.innerHTML = '<p style="color: red;">' + data.error + '</p>';
                 }
@@ -210,6 +254,62 @@
             .catch(error => {
                 resultArea.innerHTML = '<p style="color: red;">上传失败：' + error + '</p>';
             });
+        }
+        
+        function generateMaterials() {
+            const materialsArea = document.getElementById('standardMaterials');
+            
+            materialsArea.innerHTML = '<p>正在生成标准资料库...</p>';
+            
+            // 模拟生成标准资料库
+            setTimeout(() => {
+                const materials = `
+                    <h4 style="color: #667eea; margin-bottom: 10px;">家装设计标准资料库</h4>
+                    
+                    <h5 style="margin-top: 15px; margin-bottom: 5px;">一、设计规范</h5>
+                    <p>1. 空间布局原则：保证动线流畅，功能分区明确</p>
+                    <p>2. 色彩搭配：遵循 60-30-10 原则，主色60%，辅助色30%，点缀色10%</p>
+                    <p>3. 照明设计：采用基础照明、重点照明、氛围照明三层设计</p>
+                    
+                    <h5 style="margin-top: 15px; margin-bottom: 5px;">二、常用户型解析</h5>
+                    <p>1. 两居室：适合2-4人居住，核心区域为客厅和主卧</p>
+                    <p>2. 三居室：适合3-6人居住，需要规划多功能空间</p>
+                    <p>3. 四居室：适合4-8人居住，注重私密性和公共空间的平衡</p>
+                    
+                    <h5 style="margin-top: 15px; margin-bottom: 5px;">三、材料选择指南</h5>
+                    <p>1. 地面材料：瓷砖、实木地板、复合地板</p>
+                    <p>2. 墙面材料：乳胶漆、壁纸、硅藻泥</p>
+                    <p>3. 顶面材料：石膏板吊顶、集成吊顶、裸顶</p>
+                    
+                    <h5 style="margin-top: 15px; margin-bottom: 5px;">四、预算分配建议</h5>
+                    <p>1. 硬装（水电、墙地、吊顶）：40%</p>
+                    <p>2. 软装（家具、窗帘、饰品）：30%</p>
+                    <p>3. 电器设备：20%</p>
+                    <p>4. 备用金：10%</p>
+                    
+                    <h5 style="margin-top: 15px; margin-bottom: 5px;">五、学生任务清单</h5>
+                    <ul class="task-list">
+                        <li>
+                            <h4>任务1：户型分析</h4>
+                            <p>分析给定户型的优缺点，提出改进建议</p>
+                        </li>
+                        <li>
+                            <h4>任务2：方案设计</h4>
+                            <p>根据户型特点和用户需求，完成平面布局设计</p>
+                        </li>
+                        <li>
+                            <h4>任务3：材料搭配</h4>
+                            <p>选择合适的材料，完成材料方案和预算表</p>
+                        </li>
+                        <li>
+                            <h4>任务4：效果渲染</h4>
+                            <p>制作3D效果图，展示最终设计方案</p>
+                        </li>
+                    </ul>
+                `;
+                
+                materialsArea.innerHTML = materials;
+            }, 1500);
         }
         
         function submitHomework() {
