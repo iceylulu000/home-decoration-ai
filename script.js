@@ -1,4 +1,4 @@
-    <script>
+
         // ===== 工具函数 =====
         function safeSetText(id, text) {
             const el = document.getElementById(id);
@@ -393,6 +393,5 @@
                 resultArea.innerHTML = materials;
             }, 1500);
         }
-    </script>
 </body> 
 </html> 
