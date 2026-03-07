@@ -6,13 +6,14 @@ from datetime import datetime
 import sys
    import os
    
-   # 获取项目根目录
+   # 将当前目录和上级目录都加入路径
    current_dir = os.path.dirname(os.path.abspath(__file__))
-   project_root = os.path.dirname(current_dir)
+   parent_dir = os.path.dirname(current_dir)
    
-   # 添加项目根目录到路径
-   if project_root not in sys.path:
-       sys.path.insert(0, project_root)
+   if current_dir not in sys.path:
+       sys.path.insert(0, current_dir)
+   if parent_dir not in sys.path:
+       sys.path.insert(0, parent_dir)
 
 
 from src.graphs.graph import main_graph
