@@ -3,8 +3,17 @@ import os
 import sys
 from datetime import datetime
 
-project_root = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, project_root)
+import sys
+   import os
+   
+   # 获取项目根目录
+   current_dir = os.path.dirname(os.path.abspath(__file__))
+   project_root = os.path.dirname(current_dir)
+   
+   # 添加项目根目录到路径
+   if project_root not in sys.path:
+       sys.path.insert(0, project_root)
+
 
 from src.graphs.graph import main_graph
 from src.graphs.state import File
