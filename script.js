@@ -125,15 +125,28 @@ function generateMaterials() {
 }
 
 function submitHomework() {
+    console.log('[DEBUG] submitHomework 函数被调用');
+    
     const fileInput = document.getElementById('homeworkFile');
+    console.log('[DEBUG] fileInput:', fileInput);
+    console.log('[DEBUG] fileInput.files:', fileInput ? fileInput.files : 'null');
+    
+    if (!fileInput) {
+        console.error('[DEBUG] homeworkFile 元素不存在');
+        alert('系统错误：找不到文件输入框');
+        return;
+    }
     
     if (fileInput.files.length === 0) {
+        console.log('[DEBUG] 没有选择文件');
         alert('请先选择文件');
         return;
     }
     
     const formData = new FormData();
     formData.append('file', fileInput.files[0]);
+    
+    console.log('[DEBUG] 准备提交文件:', fileInput.files[0].name);
     
     const submitBtn = document.getElementById('homeworkSubmitBtn');
     submitBtn.disabled = true;
@@ -143,8 +156,12 @@ function submitHomework() {
         method: 'POST',
         body: formData
     })
-    .then(response => response.json())
+    .then(response => {
+        console.log('[DEBUG] 收到响应，状态码:', response.status);
+        return response.json();
+    })
     .then(data => {
+        console.log('[DEBUG] 响应数据:', data);
         if (data.success) {
             // 显示AI评价
             if (data.ai_feedback) {
@@ -173,10 +190,12 @@ function submitHomework() {
                     renderSubmissions(state.submissions);
                 });
         } else {
+            console.error('[DEBUG] 提交失败:', data.error);
             alert('提交失败: ' + data.error);
         }
     })
     .catch(error => {
+        console.error('[DEBUG] 请求异常:', error);
         alert('提交失败: ' + error.message);
     })
     .finally(() => {
@@ -284,26 +303,37 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // ========== 作业上传相关 ==========
+    console.log('[DEBUG] 开始初始化作业上传相关功能');
     const homeworkUploadArea = document.getElementById('homeworkUploadArea');
     const homeworkFile = document.getElementById('homeworkFile');
     const homeworkSubmitBtn = document.getElementById('homeworkSubmitBtn');
     const homeworkForm = document.getElementById('homeworkForm');
     
+    console.log('[DEBUG] homeworkUploadArea:', homeworkUploadArea);
+    console.log('[DEBUG] homeworkFile:', homeworkFile);
+    console.log('[DEBUG] homeworkSubmitBtn:', homeworkSubmitBtn);
+    console.log('[DEBUG] homeworkForm:', homeworkForm);
+    
     // 作业上传区域点击
     if (homeworkUploadArea && homeworkFile) {
+        console.log('[DEBUG] 绑定作业上传区域点击事件');
         homeworkUploadArea.addEventListener('click', () => {
+            console.log('[DEBUG] 上传区域被点击');
             homeworkFile.click();
         });
         
         // 文件选择变化
         homeworkFile.addEventListener('change', (e) => {
+            console.log('[DEBUG] 文件选择变化事件触发');
             const file = e.target.files[0];
+            console.log('[DEBUG] 选择的文件:', file);
             if (file) {
                 const placeholder = homeworkUploadArea.querySelector('.upload-placeholder');
                 if (placeholder) {
                     placeholder.innerHTML = '<span class="upload-icon">📝</span><p>' + file.name + '</p>';
                 }
                 if (homeworkSubmitBtn) {
+                    console.log('[DEBUG] 启用提交按钮');
                     homeworkSubmitBtn.disabled = false;
                 }
             }
@@ -320,9 +350,11 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         
         homeworkUploadArea.addEventListener('drop', (e) => {
+            console.log('[DEBUG] 拖拽文件事件触发');
             e.preventDefault();
             homeworkUploadArea.style.background = '#f8f9fa';
             const file = e.dataTransfer.files[0];
+            console.log('[DEBUG] 拖拽的文件:', file);
             if (file) {
                 homeworkFile.files = e.dataTransfer.files;
                 const placeholder = homeworkUploadArea.querySelector('.upload-placeholder');
@@ -330,18 +362,25 @@ document.addEventListener('DOMContentLoaded', () => {
                     placeholder.innerHTML = '<span class="upload-icon">📝</span><p>' + file.name + '</p>';
                 }
                 if (homeworkSubmitBtn) {
+                    console.log('[DEBUG] 启用提交按钮');
                     homeworkSubmitBtn.disabled = false;
                 }
             }
         });
+    } else {
+        console.error('[DEBUG] 作业上传元素未找到！');
     }
     
     // 作业表单提交
     if (homeworkForm) {
+        console.log('[DEBUG] 绑定作业表单提交事件');
         homeworkForm.addEventListener('submit', (e) => {
+            console.log('[DEBUG] 作业表单提交事件触发');
             e.preventDefault();
             submitHomework();
         });
+    } else {
+        console.error('[DEBUG] homeworkForm 元素未找到！');
     }
     
     // ========== Tab切换 ==========
