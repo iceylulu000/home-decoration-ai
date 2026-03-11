@@ -253,31 +253,112 @@ def submit_homework():
         print(f"[DEBUG] 文件保存失败: {str(e)}")
         return jsonify({'error': f'文件保存失败: {str(e)}'}), 500
     
-    # 生成AI评价（模拟）
-    import datetime
-    ai_feedback = f"""【AI评价结果】
+    # 预设的评价维度和修改建议库
+    evaluation_dimensions = {
+        '功能布局': {
+            'score': 0,
+            'threshold': 6,
+            'suggestions': {
+                'direction': '优化空间动线和功能分区',
+                'cases': [
+                    {'type': 'text', 'content': '参考案例：客厅-餐厅-厨房一字型布局，缩短动线，提升使用效率'},
+                    {'type': 'text', 'content': '参考案例：主卧设置独立衣帽间，提升收纳功能'},
+                    {'type': 'text', 'content': '参考案例：卫生间干湿分离设计，提升使用舒适度'}
+                ]
+            }
+        },
+        '风格融合': {
+            'score': 0,
+            'threshold': 6,
+            'suggestions': {
+                'direction': '增强设计风格与业主偏好的融合',
+                'cases': [
+                    {'type': 'text', 'content': '参考案例：新中式风格融入红松纹理与现代留白设计'},
+                    {'type': 'text', 'content': '参考案例：北欧风格结合原木元素与莫兰迪色系'},
+                    {'type': 'text', 'content': '参考案例：现代简约风格运用黑灰白对比色块'}
+                ]
+            }
+        },
+        '文化落地': {
+            'score': 0,
+            'threshold': 6,
+            'suggestions': {
+                'direction': '强化地域文化与现代生活的结合',
+                'cases': [
+                    {'type': 'text', 'content': '参考案例：东北火炕元素与现代地暖系统结合'},
+                    {'type': 'text', 'content': '参考案例：江南园林造景手法融入室内空间'},
+                    {'type': 'text', 'content': '参考案例：西北窑洞元素与现代保温技术结合'}
+                ]
+            }
+        },
+        '适老化': {
+            'score': 0,
+            'threshold': 6,
+            'suggestions': {
+                'direction': '提升适老化设计细节',
+                'cases': [
+                    {'type': 'text', 'content': '参考案例：卫生间安装防滑扶手和紧急呼叫系统'},
+                    {'type': 'text', 'content': '参考案例：厨房台面高度可调节设计，适应不同身高'},
+                    {'type': 'text', 'content': '参考案例：地面无门槛设计，方便轮椅通行'}
+                ]
+            }
+        },
+        'AI工具运用': {
+            'score': 0,
+            'threshold': 6,
+            'suggestions': {
+                'direction': '提升 AI 工具在设计流程中的应用',
+                'cases': [
+                    {'type': 'text', 'content': '参考案例：使用 Midjourney 生成概念设计图'},
+                    {'type': 'text', 'content': '参考案例：利用 AI 自动生成材料清单和预算表'},
+                    {'type': 'text', 'content': '参考案例：运用 AI 分析户型并提供优化建议'}
+                ]
+            }
+        }
+    }
+    
+    # 模拟 AI 评分（实际应用中应调用大模型 API）
+    import random
+    for dimension in evaluation_dimensions:
+        evaluation_dimensions[dimension]['score'] = random.randint(5, 10)
+    
+    # 生成 AI 评价文本
+    ai_feedback_text = f"""【AI评价结果】
 
-1. 设计评分：⭐⭐⭐⭐
-   - 方案设计合理，布局清晰
-   - 建议进一步完善细节处理
-
-2. 创意评分：⭐⭐⭐⭐⭐
-   - 设计思路独特，有创新性
-   - 色彩搭配富有想象力
-
-3. 实用性评分：⭐⭐⭐⭐
-   - 功能布局合理，满足基本需求
-   - 建议优化空间利用率
-
+总体评分：⭐⭐⭐⭐
+"""
+    
+    for dimension, data in evaluation_dimensions.items():
+        stars = '⭐' * data['score']
+        ai_feedback_text += f"""
+{dimension}评分：{stars}（{data['score']}/10分）
+"""
+        if data['score'] < data['threshold']:
+            ai_feedback_text += f"⚠️ 建议：{data['suggestions']['direction']}\n"
+    
+    ai_feedback_text += """
 总体评价：这是一份优秀的作业设计，展现了良好的设计思维和专业能力。继续保持！
 """
+    
+    # 生成低分维度的修改清单
+    modification_list = []
+    for dimension, data in evaluation_dimensions.items():
+        if data['score'] < data['threshold']:
+            modification_list.append({
+                'dimension': dimension,
+                'score': data['score'],
+                'direction': data['suggestions']['direction'],
+                'cases': data['suggestions']['cases']
+            })
     
     # 记录提交
     submission = {
         'filename': filename,
         'submit_time': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
         'file_path': file_path,
-        'ai_feedback': ai_feedback
+        'ai_feedback': ai_feedback_text,
+        'evaluation_scores': evaluation_dimensions,
+        'modification_list': modification_list
     }
     
     workflow_state['submissions'].append(submission)
@@ -285,7 +366,9 @@ def submit_homework():
     return jsonify({
         'success': True,
         'message': '作业提交成功！',
-        'ai_feedback': ai_feedback
+        'ai_feedback': ai_feedback_text,
+        'evaluation_scores': evaluation_dimensions,
+        'modification_list': modification_list
     })
 
 @app.route('/generate_report', methods=['POST'])
