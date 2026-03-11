@@ -1,13 +1,14 @@
 """
-家装产教融合AI闭环工作流 - Flask Web应用
+家装产教融合AI闭环工作流 - Flask Web应用（集成对象存储版本）
 三阶段系统：企业端 → 学生端 → AI点评
 """
 from flask import Flask, render_template, request, jsonify
 from werkzeug.utils import secure_filename
 import os
 import sys
-import chardet  # 新增：编码检测
+import chardet
 from datetime import datetime
+from coze_coding_dev_sdk.s3 import S3SyncStorage
 
 # 将当前目录和上级目录都加入路径
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -30,13 +31,28 @@ app.config['MAX_CONTENT_LENGTH'] = None  # 不限制文件大小
 os.makedirs('temp', exist_ok=True)
 os.makedirs('submissions', exist_ok=True)
 
+# 初始化对象存储
+try:
+    storage = S3SyncStorage(
+        endpoint_url=os.getenv("COZE_BUCKET_ENDPOINT_URL"),
+        access_key="",
+        secret_key="",
+        bucket_name=os.getenv("COZE_BUCKET_NAME"),
+        region="cn-beijing",
+    )
+    STORAGE_AVAILABLE = True
+except Exception as e:
+    print(f"对象存储初始化失败: {e}")
+    STORAGE_AVAILABLE = False
+    storage = None
+
 # 工作流状态存储
 workflow_state = {
     'stage': 1,
     'project_material': None,
     'course_content': None,
     'student_tasks': [],
-    'submissions': [],
+    'submissions': [],  # 存储提交信息（包含 file_key 和 download_url）
     'feedback_report': None
 }
 
@@ -112,7 +128,7 @@ def reset_workflow():
 
 @app.route('/upload_project', methods=['POST'])
 def upload_project():
-    """企业端：上传项目并生成教学材料"""
+    """企业端：上传项目并生成教学材料（集成对象存储版本）"""
     # 延迟加载
     graph, File = lazy_import()
     
@@ -130,6 +146,30 @@ def upload_project():
     try:
         # 先读取文件内容（使用编码检测）
         file_content = read_file_with_encoding(filepath)
+        file_size = os.path.getsize(filepath)
+        
+        # 上传到对象存储
+        file_key = None
+        preview_url = None
+        if STORAGE_AVAILABLE:
+            try:
+                # 重新读取文件对象，上传到对象存储
+                file.seek(0)
+                file_key = storage.stream_upload_file(
+                    fileobj=file,
+                    file_name=f"projects/{filename}",
+                    content_type=file.content_type or 'application/octet-stream'
+                )
+                
+                # 生成预览 URL（有效期 7 天）
+                preview_url = storage.generate_presigned_url(
+                    key=file_key,
+                    expire_time=604800  # 7 天
+                )
+            except Exception as e:
+                print(f"对象存储上传失败: {e}")
+                file_key = None
+                preview_url = None
         
         # 使用文件对象调用工作流
         project_file = File(url=filepath, file_type='document')
@@ -139,6 +179,11 @@ def upload_project():
         workflow_state['course_content'] = result.get('course_content', file_content[:500])
         workflow_state['student_tasks'] = result.get('student_tasks', [])
         workflow_state['stage'] = 2
+        
+        # 如果有对象存储，保存 file_key
+        if file_key:
+            workflow_state['project_material_key'] = file_key
+            workflow_state['project_preview_url'] = preview_url
         
         return jsonify({
             'success': True,
@@ -163,32 +208,93 @@ def upload_project():
 
 @app.route('/submit_homework', methods=['POST'])
 def submit_homework():
-    """学生端：提交作业"""
-    if 'file' not in request.files or 'task_id' not in request.form:
-        return jsonify({'error': '缺少参数'}), 400
+    """学生端：提交作业（集成对象存储版本，不限格式）"""
+    if 'file' not in request.files:
+        return jsonify({'error': '没有上传文件'}), 400
     
     file = request.files['file']
-    task_id = request.form['task_id']
     
     if file.filename == '':
         return jsonify({'error': '没有选择文件'}), 400
     
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    filename = task_id + "_" + timestamp + "_" + file.filename
-    filepath = os.path.join(app.config['SUBMISSIONS_FOLDER'], filename)
-    file.save(filepath)
+    # 上传到对象存储
+    file_key = None
+    download_url = None
+    filepath = None
+    
+    if STORAGE_AVAILABLE:
+        try:
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            file_key = storage.stream_upload_file(
+                fileobj=file,
+                file_name=f"submissions/{timestamp}_{file.filename}",
+                content_type=file.content_type or 'application/octet-stream'
+            )
+            
+            # 生成下载 URL（有效期 7 天）
+            download_url = storage.generate_presigned_url(
+                key=file_key,
+                expire_time=604800  # 7 天
+            )
+        except Exception as e:
+            print(f"对象存储上传失败: {e}")
+            file_key = None
+            download_url = None
+    
+    # 如果对象存储失败，使用本地存储
+    if not file_key:
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = timestamp + "_" + file.filename
+        filepath = os.path.join(app.config['SUBMISSIONS_FOLDER'], filename)
+        file.save(filepath)
     
     submission = {
-        'task_id': task_id,
         'filename': file.filename,
-        'filepath': filepath,
         'submit_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'file_key': file_key,
+        'download_url': download_url,
+        'filepath': filepath,
         'status': '已提交'
     }
     
     workflow_state['submissions'].append(submission)
     
     return jsonify({'success': True, 'submission': submission})
+
+@app.route('/get_submissions', methods=['GET'])
+def get_submissions():
+    """获取作业列表（供企业查看）"""
+    submissions = workflow_state['submissions']
+    return jsonify({
+        'success': True,
+        'submissions': submissions
+    })
+
+@app.route('/get_homework_url', methods=['GET'])
+def get_homework_url():
+    """获取作业下载 URL"""
+    index = request.args.get('index', type=int)
+    
+    if index is None or index < 0 or index >= len(workflow_state['submissions']):
+        return jsonify({'error': '无效的索引'}), 400
+    
+    submission = workflow_state['submissions'][index]
+    
+    # 如果有 file_key，生成新的 URL
+    if STORAGE_AVAILABLE and submission.get('file_key'):
+        download_url = storage.generate_presigned_url(
+            key=submission['file_key'],
+            expire_time=604800  # 7 天
+        )
+    elif submission.get('download_url'):
+        download_url = submission['download_url']
+    else:
+        return jsonify({'error': '无法获取下载链接'}), 400
+    
+    return jsonify({
+        'success': True,
+        'download_url': download_url
+    })
 
 @app.route('/generate_report', methods=['POST'])
 def generate_report():
@@ -210,7 +316,7 @@ def generate_feedback_report(tasks, submissions):
     task_stats = {}
     for task in tasks:
         task_id = task.get('任务ID', '1')
-        task_submissions = [s for s in submissions if s['task_id'] == task_id]
+        task_submissions = [s for s in submissions if s.get('task_id', '1') == task_id]
         task_stats[task_id] = {
             'task_name': task.get('任务名称', '未知任务'),
             'total_submissions': len(task_submissions)
