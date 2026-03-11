@@ -348,10 +348,9 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.stage-tab').forEach(tab => {
         tab.addEventListener('click', () => {
             const stage = parseInt(tab.dataset.stage);
-            if (workflowState && stage <= workflowState.stage) {
-                currentStage = stage;
-                updateStageDisplay();
-            }
+            // 测试版本：允许自由切换到任何阶段
+            currentStage = stage;
+            updateStageDisplay();
         });
     });
 });
