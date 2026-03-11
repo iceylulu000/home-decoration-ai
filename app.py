@@ -30,7 +30,8 @@ def read_file_with_encoding(file_path):
     """
     读取文件内容，自动检测编码
     支持多种编码：UTF-8, GBK, GB2312, BIG5 等
-    注意：二进制文件（图片、PDF、Word等）将不读取内容
+    支持 Word 文档（.docx）内容提取
+    注意：纯二进制文件（图片、PDF等）将不读取内容
     """
     import mimetypes
     
@@ -38,12 +39,15 @@ def read_file_with_encoding(file_path):
     filename = os.path.basename(file_path)
     file_ext = os.path.splitext(filename)[1].lower()
     
-    # 定义二进制文件扩展名列表
+    # 定义 Word 文档扩展名
+    word_extensions = {'.docx'}
+    
+    # 定义纯二进制文件扩展名列表（不解析）
     binary_extensions = {
         # 图片
         '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.ico', '.svg', '.webp', '.tiff',
-        # 文档
-        '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',
+        # 文档（纯二进制，不解析）
+        '.pdf', '.doc', '.xls', '.xlsx', '.ppt', '.pptx',
         # 压缩文件
         '.zip', '.rar', '.7z', '.tar', '.gz',
         # 视频
@@ -54,7 +58,50 @@ def read_file_with_encoding(file_path):
         '.exe', '.dll', '.so', '.dylib'
     }
     
-    # 检查是否是二进制文件
+    # 处理 Word 文档
+    if file_ext in word_extensions:
+        try:
+            print(f"[DEBUG] 开始解析Word文档: {filename}")
+            from docx import Document
+            doc = Document(file_path)
+            
+            # 提取所有段落文本
+            paragraphs = []
+            for para in doc.paragraphs:
+                if para.text.strip():
+                    paragraphs.append(para.text.strip())
+            
+            print(f"[DEBUG] 提取到 {len(paragraphs)} 个段落")
+            
+            # 提取表格内容
+            tables = []
+            for table in doc.tables:
+                for row in table.rows:
+                    row_text = []
+                    for cell in row.cells:
+                        if cell.text.strip():
+                            row_text.append(cell.text.strip())
+                    if row_text:
+                        tables.append(' | '.join(row_text))
+            
+            print(f"[DEBUG] 提取到 {len(tables)} 个表格行")
+            
+            # 组合内容
+            content = '\n\n'.join(paragraphs)
+            if tables:
+                content += '\n\n【表格内容】\n' + '\n'.join(tables)
+            
+            print(f"[DEBUG] Word文档内容长度: {len(content)} 字符")
+            
+            if content.strip():
+                return content
+            else:
+                return f"[Word文档为空: {filename}]"
+        except Exception as e:
+            print(f"[DEBUG] 读取Word文档失败: {str(e)}")
+            return f"[读取Word文档失败: {filename}，错误: {str(e)}]"
+    
+    # 检查是否是纯二进制文件
     if file_ext in binary_extensions:
         return f"[二进制文件，已成功上传: {filename}]"
     
@@ -135,6 +182,9 @@ def upload_project():
     
     # 读取文件内容（使用编码检测）
     try:
+        # 获取文件扩展名
+        file_ext = os.path.splitext(filename)[1].lower()
+        
         file_content = read_file_with_encoding(file_path)
         
         # 获取文件信息
@@ -152,11 +202,12 @@ def upload_project():
         # 构建显示内容
         if file_content.startswith('[') and file_content.endswith(']'):
             # 二进制文件或特殊格式，只显示文件信息
-            display_content = f'✅ 文件上传成功！\n\n文件名: {filename}\n文件大小: {file_size} 字节\n文件类型: 二进制文件（图片、PDF、Word文档等）\n\n{file_content}'
+            display_content = f'✅ 文件上传成功！\n\n文件名: {filename}\n文件大小: {file_size} 字节\n文件类型: 二进制文件（图片、PDF等）\n\n{file_content}'
         else:
-            # 文本文件，显示内容预览
-            preview = file_content[:500] + '...' if len(file_content) > 500 else file_content
-            display_content = f'✅ 文件读取成功！\n\n文件名: {filename}\n文件大小: {file_size} 字节\n文件类型: 文本文件\n\n内容预览:\n{preview}'
+            # 文本文件或Word文档，显示内容预览
+            preview = file_content[:2000] + '...' if len(file_content) > 2000 else file_content
+            file_type = "Word文档" if file_ext == '.docx' else "文本文件"
+            display_content = f'✅ 文件读取成功！\n\n文件名: {filename}\n文件大小: {file_size} 字节\n文件类型: {file_type}\n\n文件内容预览:\n{preview}'
         
         return jsonify({
             'success': True,
