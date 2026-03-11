@@ -4,12 +4,14 @@
     <meta charset="UTF-8">
     <title>家装产教融合AI闭环工作流</title>
     <link rel="stylesheet" href="/static/css/style.css">
+    <!-- 引入 ECharts -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
 </head>
 <body>
     <div class="container">
         <header>
             <h1>家装产教融合AI闭环工作流</h1>
-            <p class="subtitle">企业端 - 教学端 - 学生端</p>
+            <p class="subtitle">企业端 - 学生端 - AI点评</p>
         </header>
         <div class="stage-nav">
             <div class="stage-tab active" data-stage="1" id="tab1">
@@ -18,24 +20,52 @@
             </div>
             <div class="stage-tab" data-stage="2" id="tab2">
                 <span class="stage-num">2</span>
-                <span class="stage-title">教学端</span>
+                <span class="stage-title">学生端</span>
             </div>
             <div class="stage-tab" data-stage="3" id="tab3">
                 <span class="stage-num">3</span>
-                <span class="stage-title">学生端</span>
+                <span class="stage-title">AI点评</span>
             </div>
         </div>
-        
-        <!-- 第一阶段：企业端 -->
         <div class="stage-content" id="stage1">
             <div class="card">
                 <h2>上传企业项目资料</h2>
+                
+                <!-- 企业信息表单 -->
+                <div class="company-info-form">
+                    <div class="form-group">
+                        <label>企业名称 *</label>
+                        <input type="text" id="companyName" name="company_name" 
+                               placeholder="请输入设计/装修企业名称" 
+                               value="设计企业" required>
+                    </div>
+                    <div class="form-group">
+                        <label>项目类型 *</label>
+                        <select id="projectType" name="project_type" required>
+                            <option value="家装">家装</option>
+                            <option value="工装">工装</option>
+                            <option value="单一户型设计">单一户型设计</option>
+                            <option value="风格专项设计">风格专项设计</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>项目阶段 *</label>
+                        <select id="projectStage" name="project_stage" required>
+                            <option value="方案设计阶段">方案设计阶段</option>
+                            <option value="施工图绘制阶段">施工图绘制阶段</option>
+                            <option value="工地落地阶段">工地落地阶段</option>
+                            <option value="完工验收阶段">完工验收阶段</option>
+                        </select>
+                    </div>
+                </div>
+                
                 <form id="projectForm" enctype="multipart/form-data">
                     <div class="upload-area" id="projectUploadArea">
                         <input type="file" id="projectFile" name="file" accept="*" hidden>
                         <div class="upload-placeholder">
                             <span class="upload-icon">📁</span>
                             <p>点击或拖拽企业项目资料到此处</p>
+                            <p class="upload-hint">支持：项目方案、效果图、CAD施工图、报价单等</p>
                         </div>
                     </div>
                     <button type="submit" class="btn btn-primary" id="projectSubmitBtn" disabled>
@@ -51,31 +81,11 @@
                 <h2>学生实战任务列表</h2>
                 <div class="tasks-list" id="tasksList"></div>
                 <button class="btn btn-primary" onclick="goToStage2()">
-                    进入教学端
-                </button>
-            </div>
-        </div>
-        
-        <!-- 第二阶段：教学端 -->
-        <div class="stage-content" id="stage2" style="display:none">
-            <div class="result-container" id="courseResult2" style="display:none">
-                <h2>生成的教学材料</h2>
-                <button class="btn btn-primary" onclick="generateMaterials()" style="margin-bottom: 15px;">
-                    生成标准资料库
-                </button>
-                <div class="result-content" id="courseContent2"></div>
-            </div>
-            <div class="result-container" id="tasksResult2" style="display:none">
-                <h2>学生实战任务列表</h2>
-                <div class="tasks-list" id="tasksList2"></div>
-                <button class="btn btn-primary" onclick="goToStage3()">
                     进入学生端
                 </button>
             </div>
         </div>
-        
-        <!-- 第三阶段：学生端 -->
-        <div class="stage-content" id="stage3" style="display:none">
+        <div class="stage-content" id="stage2" style="display:none">
             <div class="card">
                 <h2>提交作业</h2>
                 <form id="homeworkForm" enctype="multipart/form-data">
@@ -91,11 +101,24 @@
                         提交作业
                     </button>
                 </form>
-            </div>
-            <!-- AI评价显示区域（新增） -->
-            <div class="result-container" id="aiFeedbackResult" style="display:none">
-                <h2>AI作业评价</h2>
-                <div class="result-content ai-feedback" id="aiFeedbackContent"></div>
+                
+                <!-- AI 评价显示区域 -->
+                <div id="aiFeedbackResult" class="ai-feedback-result" style="display:none">
+                    <h4>🤖 AI 评价</h4>
+                    <div id="aiFeedbackContent"></div>
+                    
+                    <!-- 雷达图显示区域 -->
+                    <div id="radarChartContainer" class="radar-chart-container" style="display:none">
+                        <h5>📊 五维评分雷达图</h5>
+                        <div id="radarChart" style="width: 100%; height: 400px;"></div>
+                    </div>
+                    
+                    <!-- 修改清单显示区域 -->
+                    <div id="modificationListContainer" class="modification-list-container" style="display:none">
+                        <h5>📝 修改建议清单</h5>
+                        <div id="modificationList"></div>
+                    </div>
+                </div>
             </div>
             <div class="result-container" id="submissionsResult" style="display:none">
                 <h2>已提交作业列表</h2>
@@ -104,7 +127,9 @@
                     生成点评报告
                 </button>
             </div>
-            <div class="result-container" id="reportResult" style="display:none">
+        </div>
+        <div class="stage-content" id="stage3" style="display:none">
+            <div class="result-container">
                 <h2>AI作业点评报告</h2>
                 <div class="result-content" id="reportContent"></div>
                 <button class="btn btn-secondary" onclick="resetWorkflow()">
