@@ -1,5 +1,5 @@
 """
-家装产教融合AI闭环工作流 - Flask Web应用（集成对象存储版本）
+家装产教融合AI闭环工作流 - Flask Web应用（集成对象存储 + AI评价版本）
 三阶段系统：企业端 → 学生端 → AI点评
 """
 from flask import Flask, render_template, request, jsonify
@@ -9,6 +9,8 @@ import sys
 import chardet
 from datetime import datetime
 from coze_coding_dev_sdk.s3 import S3SyncStorage
+from coze_coding_dev_sdk import LLMClient
+from langchain_core.messages import SystemMessage, HumanMessage
 
 # 将当前目录和上级目录都加入路径
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -41,8 +43,9 @@ try:
         region="cn-beijing",
     )
     STORAGE_AVAILABLE = True
+    print("✅ 对象存储初始化成功")
 except Exception as e:
-    print(f"对象存储初始化失败: {e}")
+    print(f"❌ 对象存储初始化失败: {e}")
     STORAGE_AVAILABLE = False
     storage = None
 
@@ -52,7 +55,7 @@ workflow_state = {
     'project_material': None,
     'course_content': None,
     'student_tasks': [],
-    'submissions': [],  # 存储提交信息（包含 file_key 和 download_url）
+    'submissions': [],  # 存储提交信息（包含 file_key、download_url 和 ai_feedback）
     'feedback_report': None
 }
 
@@ -101,6 +104,88 @@ def read_file_with_encoding(file_path):
                 return f"[无法解析文件内容，文件大小: {len(raw_data)} 字节]"
     except Exception as e:
         return f"[读取文件失败: {str(e)}]"
+
+def generate_ai_feedback(file_url, file_type, filepath=None):
+    """
+    调用大模型生成作业评价
+    评价维度：设计、创意、实用性
+    """
+    try:
+        client = LLMClient()
+        
+        # 系统提示词
+        system_prompt = """你是一位专业的家装设计作业评价老师，擅长从设计、创意、实用性三个维度评价学生作业。
+
+评价标准：
+1. 设计：布局是否合理、色彩搭配是否协调、风格是否统一
+2. 创意：设计是否有新意、是否突破传统、是否有个性化表达
+3. 实用性：方案是否可行、是否考虑实际使用需求、成本控制是否合理
+
+请按照以下格式输出评价：
+
+【设计评价】
+[评价内容]
+
+【创意评价】
+[评价内容]
+
+【实用性评价】
+[评价内容]
+
+【总体评分】
+[给出一个1-5星的评分，如⭐⭐⭐⭐⭐]
+
+【改进建议】
+[具体的改进建议]
+
+注意：评价要客观公正，既要肯定优点，也要指出不足，并给出可操作的改进建议。"""
+        
+        # 用户提示词
+        if file_type in ['image', 'video']:
+            # 多模态评价
+            messages = [
+                SystemMessage(content=system_prompt),
+                HumanMessage(content=[
+                    {
+                        "type": "text",
+                        "text": "请从设计、创意、实用性三个维度评价这份作业。"
+                    },
+                    {
+                        "type": f"{file_type}_url",
+                        f"{file_type}_url": {"url": file_url}
+                    }
+                ])
+            ]
+        else:
+            # 文本评价
+            if filepath and os.path.exists(filepath):
+                file_content = read_file_with_encoding(filepath)
+                user_prompt = f"请从设计、创意、实用性三个维度评价以下作业内容：\n\n{file_content}"
+            else:
+                user_prompt = f"请从设计、创意、实用性三个维度评价这份作业。"
+            
+            messages = [
+                SystemMessage(content=system_prompt),
+                HumanMessage(content=user_prompt)
+            ]
+        
+        # 调用大模型
+        response = client.invoke(messages=messages, temperature=0.7)
+        
+        # 安全提取文本内容
+        if isinstance(response.content, str):
+            return response.content
+        elif isinstance(response.content, list):
+            if response.content and isinstance(response.content[0], str):
+                return " ".join(response.content)
+            else:
+                text_parts = [item.get("text", "") for item in response.content if isinstance(item, dict) and item.get("type") == "text"]
+                return " ".join(text_parts)
+        else:
+            return str(response.content)
+    except Exception as e:
+        print(f"AI评价失败: {e}")
+        return f"AI评价失败: {str(e)}"
 
 @app.route('/')
 def index():
@@ -166,8 +251,9 @@ def upload_project():
                     key=file_key,
                     expire_time=604800  # 7 天
                 )
+                print(f"✅ 项目文件已上传到对象存储: {file_key}")
             except Exception as e:
-                print(f"对象存储上传失败: {e}")
+                print(f"❌ 对象存储上传失败: {e}")
                 file_key = None
                 preview_url = None
         
@@ -208,7 +294,7 @@ def upload_project():
 
 @app.route('/submit_homework', methods=['POST'])
 def submit_homework():
-    """学生端：提交作业（集成对象存储版本，不限格式）"""
+    """学生端：提交作业（集成AI评价版本，不限格式）"""
     if 'file' not in request.files:
         return jsonify({'error': '没有上传文件'}), 400
     
@@ -216,6 +302,18 @@ def submit_homework():
     
     if file.filename == '':
         return jsonify({'error': '没有选择文件'}), 400
+    
+    # 判断文件类型
+    file_extension = file.filename.split('.')[-1].lower() if '.' in file.filename else ''
+    image_extensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp']
+    video_extensions = ['mp4', 'avi', 'mov', 'mkv', 'flv', 'wmv']
+    
+    if file_extension in image_extensions:
+        file_type = 'image'
+    elif file_extension in video_extensions:
+        file_type = 'video'
+    else:
+        file_type = 'document'
     
     # 上传到对象存储
     file_key = None
@@ -236,8 +334,9 @@ def submit_homework():
                 key=file_key,
                 expire_time=604800  # 7 天
             )
+            print(f"✅ 作业已上传到对象存储: {file_key}")
         except Exception as e:
-            print(f"对象存储上传失败: {e}")
+            print(f"❌ 对象存储上传失败: {e}")
             file_key = None
             download_url = None
     
@@ -247,6 +346,18 @@ def submit_homework():
         filename = timestamp + "_" + file.filename
         filepath = os.path.join(app.config['SUBMISSIONS_FOLDER'], filename)
         file.save(filepath)
+        print(f"✅ 作业已保存到本地: {filepath}")
+    
+    # 调用大模型生成AI评价
+    ai_feedback = ""
+    try:
+        file_url = download_url or f"file://{filepath}"
+        print(f"🤖 开始生成AI评价，文件类型: {file_type}")
+        ai_feedback = generate_ai_feedback(file_url, file_type, filepath)
+        print(f"✅ AI评价生成完成")
+    except Exception as e:
+        print(f"❌ AI评价失败: {e}")
+        ai_feedback = f"AI评价暂时不可用: {str(e)}"
     
     submission = {
         'filename': file.filename,
@@ -254,12 +365,18 @@ def submit_homework():
         'file_key': file_key,
         'download_url': download_url,
         'filepath': filepath,
+        'file_type': file_type,
+        'ai_feedback': ai_feedback,  # 新增：AI评价
         'status': '已提交'
     }
     
     workflow_state['submissions'].append(submission)
     
-    return jsonify({'success': True, 'submission': submission})
+    return jsonify({
+        'success': True,
+        'submission': submission,
+        'ai_feedback': ai_feedback  # 返回AI评价
+    })
 
 @app.route('/get_submissions', methods=['GET'])
 def get_submissions():
@@ -298,7 +415,7 @@ def get_homework_url():
 
 @app.route('/generate_report', methods=['POST'])
 def generate_report():
-    """AI点评：生成反馈报告"""
+    """AI点评：生成反馈报告（集成AI评价版本）"""
     try:
         submissions = workflow_state['submissions']
         tasks = workflow_state['student_tasks']
@@ -312,7 +429,7 @@ def generate_report():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 def generate_feedback_report(tasks, submissions):
-    """生成反馈报告"""
+    """生成反馈报告（集成AI评价）"""
     task_stats = {}
     for task in tasks:
         task_id = task.get('任务ID', '1')
@@ -327,7 +444,15 @@ def generate_feedback_report(tasks, submissions):
     for task_id, stats in task_stats.items():
         report += "任务 " + task_id + " - " + stats['task_name'] + ": " + str(stats['total_submissions']) + " 份提交\n"
     
-    report += "\n【点评分析】\n已收到 " + str(len(submissions)) + " 份作业提交\n\n【优秀作业展示】\n根据提交情况，以下是值得学习的作业特点：\n\n1. 创新性强：部分作业展现了独特的设计思路\n2. 完成度高：整体方案完整，细节处理到位\n3. 实用性好：设计方案具有实际可操作性\n\n【改进建议】\n1. 加强前期调研，确保方案符合实际需求\n2. 注重细节处理，提升作品整体质量\n3. 多参考优秀案例，拓展设计思路\n\n【产教融合成果】\n本次实训体现了校企合作的良好效果：\n- 企业提供真实项目案例\n- 学生在实战中提升能力\n- 教学成果可直接应用于实际工作\n\n报告生成时间: " + datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    report += "\n【详细评价】\n"
+    for i, submission in enumerate(submissions, 1):
+        report += f"\n--- 提交 {i}: {submission.get('filename', '未知')} ---\n"
+        report += f"提交时间: {submission.get('submit_time', '未知')}\n"
+        report += f"文件类型: {submission.get('file_type', '文档')}\n"
+        if submission.get('ai_feedback'):
+            report += f"AI评价:\n{submission.get('ai_feedback')}\n"
+    
+    report += "\n【总体分析】\n已收到 " + str(len(submissions)) + " 份作业提交，AI从设计、创意、实用性三个维度进行了评价。\n\n【优秀作业展示】\n根据提交情况，以下是值得学习的作业特点：\n\n1. 创新性强：部分作业展现了独特的设计思路\n2. 完成度高：整体方案完整，细节处理到位\n3. 实用性好：设计方案具有实际可操作性\n\n【改进建议】\n1. 加强前期调研，确保方案符合实际需求\n2. 注重细节处理，提升作品整体质量\n3. 多参考优秀案例，拓展设计思路\n\n【产教融合成果】\n本次实训体现了校企合作的良好效果：\n- 企业提供真实项目案例\n- 学生在实战中提升能力\n- AI提供专业评价和改进建议\n- 教学成果可直接应用于实际工作\n\n报告生成时间: " + datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     
     return report
 
