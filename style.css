@@ -1,44 +1,118 @@
-*{margin:0;padding:0;box-sizing:border-box}
-body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;padding:20px}
-.container{max-width:1200px;margin:0 auto}
-header{text-align:center;color:white;margin-bottom:40px}
-header h1{font-size:2.5em;margin-bottom:10px}
-.subtitle{font-size:1.2em;opacity:0.9}
-.stage-nav{display:flex;justify-content:space-between;margin-bottom:30px;gap:20px}
-.stage-tab{flex:1;background:rgba(255,255,255,0.2);border-radius:12px;padding:20px;text-align:center;color:white;cursor:pointer;transition:all 0.3s;border:3px solid transparent}
-.stage-tab:hover{background:rgba(255,255,255,0.3)}
-.stage-tab.active{background:white;color:#667eea;border-color:#667eea}
-.stage-tab.completed{background:rgba(76,175,80,0.8)}
-.stage-num{font-size:2em;font-weight:bold;display:block;margin-bottom:10px}
-.stage-title{font-size:1.2em;font-weight:bold;display:block;margin-bottom:5px}
-.stage-status{font-size:0.9em;opacity:0.8}
-.card{background:white;border-radius:12px;padding:40px;margin-bottom:30px;box-shadow:0 10px 30px rgba(0,0,0,0.2)}
-.card h2{margin-bottom:20px;color:#333}
-.upload-area{border:3px dashed #667eea;border-radius:8px;padding:60px 20px;text-align:center;cursor:pointer;transition:all 0.3s;margin-bottom:20px}
-.upload-area:hover{background:#f0f4ff;border-color:#764ba2}
-.upload-placeholder p{font-size:1.2em;color:#666;margin-bottom:10px}
-.upload-hint{font-size:0.9em;color:#999}
-.upload-icon{font-size:64px;display:block;margin-bottom:20px}
-.btn{padding:15px 40px;font-size:1.1em;border:none;border-radius:8px;cursor:pointer;transition:all 0.3s;font-weight:bold}
-.btn-primary{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;width:100%}
-.btn-primary:hover:not(:disabled){transform:translateY(-2px)}
-.btn-primary:disabled{background:#ccc;cursor:not-allowed}
-.btn-secondary{background:#f0f0f0;color:#333;margin-top:20px}
-.result-container{background:white;border-radius:12px;padding:40px;margin-bottom:30px;box-shadow:0 10px 30px rgba(0,0,0,0.2)}
-.result-container h2{margin-bottom:20px;color:#333}
-.result-content{background:#f9f9f9;border-radius:8px;padding:30px;margin-bottom:20px;white-space:pre-wrap;line-height:1.6;color:#333;max-height:600px;overflow-y:auto}
-.tasks-list{display:grid;gap:20px}
-.task-item{background:#f9f9f9;border-radius:8px;padding:20px;border-left:4px solid #667eea}
-.task-id{font-weight:bold;color:#667eea;margin-bottom:10px}
-.task-name{font-size:1.1em;margin-bottom:10px}
-.task-desc{color:#666;margin-bottom:10px}
-.task-meta{font-size:0.9em;color:#999}
-.task-selector{margin-bottom:20px}
-.task-selector label{font-weight:bold;margin-right:10px}
-.task-selector select{padding:10px;border-radius:6px;border:1px solid #ddd;font-size:1em;min-width:300px}
-.submissions-list{display:grid;gap:15px}
-.submission-item{background:#f9f9f9;border-radius:8px;padding:15px;border-left:4px solid #4caf50}
-.submission-task{font-weight:bold;color:#4caf50;margin-bottom:5px}/* 企业信息表单 */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    padding: 20px;
+    color: #333;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+/* 页面标题 */
+header {
+    text-align: center;
+    color: white;
+    margin-bottom: 40px;
+}
+
+header h1 {
+    font-size: 2.5rem;
+    margin-bottom: 10px;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+}
+
+.subtitle {
+    font-size: 1.1rem;
+    opacity: 0.9;
+}
+
+/* 阶段导航 */
+.stage-nav {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin-bottom: 40px;
+}
+
+.stage-tab {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    cursor: pointer;
+    transition: all 0.3s;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    min-width: 250px;
+}
+
+.stage-tab:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 15px rgba(0,0,0,0.2);
+}
+
+.stage-tab.active {
+    border: 3px solid #667eea;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.stage-tab.completed .stage-num {
+    background: #10b981;
+}
+
+.stage-num {
+    width: 50px;
+    height: 50px;
+    background: #667eea;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    font-weight: bold;
+}
+
+.stage-tab.completed .stage-num {
+    background: #10b981;
+}
+
+.stage-tab.active .stage-num {
+    background: white;
+    color: #667eea;
+}
+
+.stage-title {
+    font-size: 1.2rem;
+    font-weight: bold;
+}
+
+/* 阶段内容 */
+.stage-content {
+    background: white;
+    border-radius: 12px;
+    padding: 40px;
+    box-shadow: 0 8px 15px rgba(0,0,0,0.2);
+}
+
+.card h2 {
+    font-size: 2rem;
+    margin-bottom: 20px;
+    color: #667eea;
+}
+
+/* 企业信息表单 */
 .company-info-form {
     background: #f8f9fa;
     padding: 25px;
@@ -81,7 +155,221 @@ header h1{font-size:2.5em;margin-bottom:10px}
     border-color: #667eea;
 }
 
-/* AI评价区域 */
+/* 上传区域 */
+.upload-area {
+    border: 3px dashed #667eea;
+    border-radius: 12px;
+    padding: 40px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+    background: #f8f9fa;
+    margin-bottom: 25px;
+    position: relative;
+    z-index: 1;
+}
+
+.upload-area:hover {
+    background: #f0f4ff;
+    border-color: #764ba2;
+}
+
+.upload-area.drag-over {
+    background: #e8f0fe;
+    border-color: #667eea;
+    border-style: solid;
+    transform: scale(1.02);
+}
+
+.upload-placeholder {
+    pointer-events: none;
+    position: relative;
+    z-index: -1;
+}
+
+.upload-icon {
+    font-size: 3rem;
+    display: block;
+    margin-bottom: 10px;
+}
+
+.upload-hint {
+    font-size: 0.9rem;
+    color: #999;
+    margin-top: 5px;
+}
+
+/* 按钮样式 */
+.btn {
+    width: 100%;
+    padding: 15px;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.btn-primary:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.btn-secondary {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: white;
+    margin-top: 20px;
+}
+
+.btn-secondary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+}
+
+/* 结果区域 */
+.result-container {
+    background: #f8f9fa;
+    border-radius: 12px;
+    padding: 30px;
+    margin-top: 30px;
+    border: 2px solid #e0e0e0;
+}
+
+.result-container h2 {
+    color: #667eea;
+    margin-bottom: 20px;
+    font-size: 1.5rem;
+}
+
+.result-content {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+    white-space: pre-wrap;
+    line-height: 1.8;
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+/* 任务列表 */
+.tasks-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.task-item {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    border-left: 4px solid #667eea;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.task-id {
+    font-weight: bold;
+    color: #667eea;
+    margin-bottom: 10px;
+    font-size: 1.1rem;
+}
+
+.task-name {
+    font-size: 1.3rem;
+    font-weight: bold;
+    margin-bottom: 10px;
+    color: #333;
+}
+
+.task-desc {
+    color: #666;
+    line-height: 1.6;
+    margin-bottom: 15px;
+}
+
+.task-meta {
+    display: flex;
+    gap: 20px;
+    font-size: 0.9rem;
+    color: #999;
+}
+
+.task-meta span {
+    background: #f0f0f0;
+    padding: 5px 10px;
+    border-radius: 4px;
+}
+
+/* 提交记录 */
+.submissions-list {
+    margin-bottom: 20px;
+}
+
+.submission-item {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    border-left: 4px solid #10b981;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-bottom: 15px;
+}
+
+.submission-task {
+    font-weight: bold;
+    color: #10b981;
+    margin-bottom: 8px;
+}
+
+.submission-file {
+    color: #666;
+    margin-bottom: 5px;
+}
+
+.submission-time {
+    font-size: 0.9rem;
+    color: #999;
+}
+
+/* 任务选择器 */
+.task-selector {
+    margin-bottom: 25px;
+}
+
+.task-selector label {
+    display: block;
+    margin-bottom: 10px;
+    font-weight: 600;
+    color: #333;
+}
+
+.task-selector select {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 1rem;
+    background: white;
+}
+
+.task-selector select:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+/* AI 评价区域 */
 .ai-feedback-result {
     background: #f0f9ff;
     border: 2px solid #667eea;
@@ -105,6 +393,25 @@ header h1{font-size:2.5em;margin-bottom:10px}
     line-height: 1.8;
     color: #333;
     white-space: pre-wrap;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    header h1 {
+        font-size: 1.8rem;
+    }
+    
+    .stage-nav {
+        flex-direction: column;
+    }
+    
+    .stage-tab {
+        min-width: auto;
+    }
+    
+    .stage-content {
+        padding: 20px;
+    }
 }
 
 /* 雷达图容器 */
@@ -154,7 +461,36 @@ header h1{font-size:2.5em;margin-bottom:10px}
     box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
     transform: translateY(-2px);
 }
-.submission-file{margin-bottom:5px}
-.submission-time{font-size:0.9em;color:#999}
-.stage-content{animation:fadeIn 0.5s}
-@keyframes fadeIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+
+.modification-item h6 {
+    margin: 0 0 10px 0;
+    font-size: 16px;
+    color: #667eea;
+}
+
+.modification-item .badge {
+    background: #fef3cd;
+    color: #856404;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.modification-item p {
+    margin: 10px 0;
+    color: #333;
+}
+
+.modification-item .reference-case {
+    margin-bottom: 8px;
+    padding: 10px;
+    background: white;
+    border-radius: 6px;
+    border: 1px solid #e0e0e0;
+}
+
+.modification-item .reference-case strong {
+    font-weight: bold;
+    color: #667eea;
+}
