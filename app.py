@@ -18,7 +18,7 @@ os.makedirs('submissions', exist_ok=True)
 
 # 工作流状态存储
 workflow_state = {
-    'stage': 1,
+    'stage': 2,  # 测试版本：设置为2，允许用户直接进入学生端
     'project_material': None,
     'course_content': None,
     'student_tasks': [],
@@ -94,7 +94,7 @@ def upload_project():
         workflow_state['project_material'] = {
             'filename': filename,
             'file_size': file_size,
-            'content': file_content[:1000] + '...' if len(file_content) > 1000 else file_content,  # 只保存前1000字符
+            'content': file_content[:1000] + '...' if len(file_content) > 1000 else file_content,
             'file_path': file_path
         }
         workflow_state['stage'] = 2
@@ -202,7 +202,7 @@ def generate_report():
 @app.route('/reset_workflow', methods=['POST'])
 def reset_workflow():
     """重置工作流"""
-    workflow_state['stage'] = 1
+    workflow_state['stage'] = 2
     workflow_state['project_material'] = None
     workflow_state['course_content'] = None
     workflow_state['student_tasks'] = []
