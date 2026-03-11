@@ -30,11 +30,44 @@ def read_file_with_encoding(file_path):
     """
     读取文件内容，自动检测编码
     支持多种编码：UTF-8, GBK, GB2312, BIG5 等
+    注意：二进制文件（图片、PDF、Word等）将不读取内容
     """
+    import mimetypes
+    
+    # 获取文件扩展名
+    filename = os.path.basename(file_path)
+    file_ext = os.path.splitext(filename)[1].lower()
+    
+    # 定义二进制文件扩展名列表
+    binary_extensions = {
+        # 图片
+        '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.ico', '.svg', '.webp', '.tiff',
+        # 文档
+        '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',
+        # 压缩文件
+        '.zip', '.rar', '.7z', '.tar', '.gz',
+        # 视频
+        '.mp4', '.avi', '.mov', '.wmv', '.flv', '.mkv',
+        # 音频
+        '.mp3', '.wav', '.flac', '.aac', '.ogg',
+        # 其他
+        '.exe', '.dll', '.so', '.dylib'
+    }
+    
+    # 检查是否是二进制文件
+    if file_ext in binary_extensions:
+        return f"[二进制文件，已成功上传: {filename}]"
+    
+    # 尝试读取文本文件
     try:
         # 先尝试 UTF-8
         with open(file_path, 'r', encoding='utf-8') as f:
-            return f.read()
+            content = f.read()
+            # 验证读取的内容是否包含过多控制字符（可能是二进制文件）
+            control_chars = sum(1 for c in content if ord(c) < 32 and c not in '\n\r\t')
+            if len(content) > 0 and control_chars / len(content) > 0.1:
+                return f"[二进制文件，已成功上传: {filename}]"
+            return content
     except UnicodeDecodeError:
         try:
             # 检测文件编码
@@ -45,16 +78,33 @@ def read_file_with_encoding(file_path):
                 confidence = result['confidence']
                 
                 # 使用检测到的编码读取文件
-                if encoding and confidence > 0.7:
-                    return raw_data.decode(encoding, errors='ignore')
+                if encoding and confidence > 0.5:
+                    decoded_content = raw_data.decode(encoding, errors='ignore')
+                    # 验证读取的内容是否包含过多控制字符
+                    control_chars = sum(1 for c in decoded_content if ord(c) < 32 and c not in '\n\r\t')
+                    if len(decoded_content) > 0 and control_chars / len(decoded_content) > 0.1:
+                        return f"[可能是二进制文件，已成功上传: {filename}]"
+                    return decoded_content
                 else:
-                    # 默认尝试 GBK
-                    return raw_data.decode('gbk', errors='ignore')
+                    # 尝试常见的中文编码
+                    for enc in ['gbk', 'gb2312', 'gb18030', 'big5']:
+                        try:
+                            decoded_content = raw_data.decode(enc, errors='ignore')
+                            control_chars = sum(1 for c in decoded_content if ord(c) < 32 and c not in '\n\r\t')
+                            if len(decoded_content) > 0 and control_chars / len(decoded_content) <= 0.1:
+                                return decoded_content
+                        except:
+                            continue
+                    
+                    # 如果都失败，返回文件信息
+                    file_size = len(raw_data)
+                    return f"[文件已成功上传: {filename}，大小: {file_size} 字节]"
         except Exception as e:
-            # 如果所有编码都失败，尝试以二进制方式读取
+            # 如果所有编码都失败，返回文件信息
             with open(file_path, 'rb') as f:
                 raw_data = f.read()
-                return f"[无法解析文件内容，文件大小: {len(raw_data)} 字节]"
+                file_size = len(raw_data)
+                return f"[文件已成功上传: {filename}，大小: {file_size} 字节]"
     except Exception as e:
         return f"[读取文件失败: {str(e)}]"
 
@@ -90,20 +140,28 @@ def upload_project():
         # 获取文件信息
         file_size = os.path.getsize(file_path)
         
-        # 更新工作流状态
+        # 更新工作流状态（只存储文件信息，不存储内容）
         workflow_state['project_material'] = {
             'filename': filename,
             'file_size': file_size,
-            'content': file_content[:1000] + '...' if len(file_content) > 1000 else file_content,
             'file_path': file_path
         }
         workflow_state['stage'] = 2
         
         # 测试版本：不调用工作流，直接返回模拟数据
+        # 构建显示内容
+        if file_content.startswith('[') and file_content.endswith(']'):
+            # 二进制文件或特殊格式，只显示文件信息
+            display_content = f'✅ 文件上传成功！\n\n文件名: {filename}\n文件大小: {file_size} 字节\n文件类型: 二进制文件（图片、PDF、Word文档等）\n\n{file_content}'
+        else:
+            # 文本文件，显示内容预览
+            preview = file_content[:500] + '...' if len(file_content) > 500 else file_content
+            display_content = f'✅ 文件读取成功！\n\n文件名: {filename}\n文件大小: {file_size} 字节\n文件类型: 文本文件\n\n内容预览:\n{preview}'
+        
         return jsonify({
             'success': True,
             'data': {
-                'course_content': f'已成功读取文件：{filename}\n文件大小：{file_size} 字节\n文件内容预览：\n{file_content[:500]}',
+                'course_content': display_content,
                 'student_tasks': [
                     {'任务ID': '1', '任务名称': '测试任务1', '任务描述': '测试描述1', '难度': '简单', '截止时间': '2024-12-31'},
                     {'任务ID': '2', '任务名称': '测试任务2', '任务描述': '测试描述2', '难度': '中等', '截止时间': '2024-12-31'}
@@ -116,18 +174,33 @@ def upload_project():
 @app.route('/submit_homework', methods=['POST'])
 def submit_homework():
     """学生端：提交作业（测试版本）"""
+    print(f"[DEBUG] submit_homework 被调用")
+    print(f"[DEBUG] request.files: {request.files}")
+    print(f"[DEBUG] request.form: {request.form}")
+    
     if 'file' not in request.files:
+        print(f"[DEBUG] 没有找到 file 字段")
         return jsonify({'error': '没有上传文件'}), 400
     
     file = request.files['file']
+    print(f"[DEBUG] 文件对象: {file}")
+    print(f"[DEBUG] 文件名: {file.filename}")
     
     if file.filename == '':
+        print(f"[DEBUG] 文件名为空")
         return jsonify({'error': '没有选择文件'}), 400
     
     # 保存作业文件
     filename = file.filename
     file_path = os.path.join(app.config['SUBMISSIONS_FOLDER'], filename)
-    file.save(file_path)
+    print(f"[DEBUG] 准备保存文件到: {file_path}")
+    
+    try:
+        file.save(file_path)
+        print(f"[DEBUG] 文件保存成功")
+    except Exception as e:
+        print(f"[DEBUG] 文件保存失败: {str(e)}")
+        return jsonify({'error': f'文件保存失败: {str(e)}'}), 500
     
     # 生成AI评价（模拟）
     import datetime
@@ -202,7 +275,7 @@ def generate_report():
 @app.route('/reset_workflow', methods=['POST'])
 def reset_workflow():
     """重置工作流"""
-    workflow_state['stage'] = 2
+    workflow_state['stage'] = 2  # 修复：保持为2，允许用户直接进入学生端
     workflow_state['project_material'] = None
     workflow_state['course_content'] = None
     workflow_state['student_tasks'] = []
