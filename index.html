@@ -78,24 +78,24 @@
         <div class="stage-content" id="stage3" style="display:none">
             <div class="card">
                 <h2>提交作业</h2>
-                <div class="task-selector">
-                    <label>选择任务：</label>
-                    <select id="taskSelect">
-                        <option value="">请选择任务</option>
-                    </select>
-                </div>
                 <form id="homeworkForm" enctype="multipart/form-data">
                     <div class="upload-area" id="homeworkUploadArea">
-                        <input type="file" id="homeworkFile" name="file" accept=".pdf,.doc,.docx,.jpg,.png" hidden>
+                        <input type="file" id="homeworkFile" name="file" accept="*" hidden>
                         <div class="upload-placeholder">
                             <span class="upload-icon">📝</span>
                             <p>点击或拖拽作业文件到此处</p>
+                            <p class="upload-hint">支持：任意格式文件（图片、视频、文档等）</p>
                         </div>
                     </div>
                     <button type="submit" class="btn btn-primary" id="homeworkSubmitBtn" disabled>
                         提交作业
                     </button>
                 </form>
+            </div>
+            <!-- AI评价显示区域（新增） -->
+            <div class="result-container" id="aiFeedbackResult" style="display:none">
+                <h2>AI作业评价</h2>
+                <div class="result-content ai-feedback" id="aiFeedbackContent"></div>
             </div>
             <div class="result-container" id="submissionsResult" style="display:none">
                 <h2>已提交作业列表</h2>
