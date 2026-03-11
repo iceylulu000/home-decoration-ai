@@ -163,13 +163,23 @@ function submitHomework() {
     .then(data => {
         console.log('[DEBUG] 响应数据:', data);
         if (data.success) {
-            // 显示AI评价
+            // 显示AI评价文本
             if (data.ai_feedback) {
                 const aiFeedbackArea = document.getElementById('aiFeedbackContent');
                 if (aiFeedbackArea) {
                     aiFeedbackArea.innerHTML = data.ai_feedback.replace(/\n/g, '<br>');
                     document.getElementById('aiFeedbackResult').style.display = 'block';
                 }
+            }
+            
+            // 显示雷达图
+            if (data.evaluation_scores) {
+                renderRadarChart(data.evaluation_scores);
+            }
+            
+            // 显示修改清单
+            if (data.modification_list && data.modification_list.length > 0) {
+                renderModificationList(data.modification_list);
             }
             
             alert('作业提交成功！');
@@ -502,4 +512,139 @@ function resetWorkflow() {
     .catch(error => {
         alert('重置失败: ' + error);
     });
+}
+
+// ===== 渲染雷达图 =====
+function renderRadarChart(evaluationScores) {
+    console.log('[DEBUG] 开始渲染雷达图:', evaluationScores);
+    
+    const radarChartContainer = document.getElementById('radarChartContainer');
+    const radarChartDiv = document.getElementById('radarChart');
+    
+    if (!radarChartContainer || !radarChartDiv) {
+        console.error('[DEBUG] 雷达图容器不存在');
+        return;
+    }
+    
+    radarChartContainer.style.display = 'block';
+    
+    // 提取维度和分数
+    const dimensions = Object.keys(evaluationScores);
+    const scores = dimensions.map(dim => evaluationScores[dim].score);
+    const thresholds = dimensions.map(dim => evaluationScores[dim].threshold);
+    
+    // 初始化 ECharts 实例
+    const radarChart = echarts.init(radarChartDiv);
+    
+    // 配置雷达图
+    const option = {
+        title: {
+            text: '五维评分雷达图',
+            left: 'center'
+        },
+        tooltip: {
+            trigger: 'axis'
+        },
+        legend: {
+            data: ['实际得分', '达标线'],
+            bottom: 0
+        },
+        radar: {
+            indicator: dimensions.map(dim => ({
+                name: dim,
+                max: 10
+            })),
+            radius: '60%',
+            axisName: {
+                fontSize: 14,
+                fontWeight: 'bold'
+            }
+        },
+        series: [{
+            name: '评分数据',
+            type: 'radar',
+            data: [
+                {
+                    value: scores,
+                    name: '实际得分',
+                    itemStyle: {
+                        color: '#667eea'
+                    },
+                    areaStyle: {
+                        color: 'rgba(102, 126, 234, 0.3)'
+                    }
+                },
+                {
+                    value: thresholds,
+                    name: '达标线',
+                    itemStyle: {
+                        color: '#10b981'
+                    },
+                    lineStyle: {
+                        type: 'dashed'
+                    },
+                    areaStyle: {
+                        color: 'rgba(16, 185, 129, 0.1)'
+                    }
+                }
+            ]
+        }]
+    };
+    
+    radarChart.setOption(option);
+    
+    // 响应式调整
+    window.addEventListener('resize', () => {
+        radarChart.resize();
+    });
+}
+
+// ===== 渲染修改清单 =====
+function renderModificationList(modificationList) {
+    console.log('[DEBUG] 开始渲染修改清单:', modificationList);
+    
+    const modificationListContainer = document.getElementById('modificationListContainer');
+    const modificationListDiv = document.getElementById('modificationList');
+    
+    if (!modificationListContainer || !modificationListDiv) {
+        console.error('[DEBUG] 修改清单容器不存在');
+        return;
+    }
+    
+    modificationListContainer.style.display = 'block';
+    
+    if (modificationList.length === 0) {
+        modificationListDiv.innerHTML = '<p style="text-align:center;color:#10b981;font-size:16px;">🎉 太棒了！所有维度都达到标准，无需修改！</p>';
+        return;
+    }
+    
+    // 生成修改清单 HTML
+    const html = modificationList.map((item, index) => `
+        <div class="modification-item" style="margin-bottom: 20px; padding: 20px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #667eea;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                <h6 style="margin:0;font-size:16px;color:#667eea;">
+                    ${index + 1}. ${item.dimension}（当前得分: ${item.score}/10）
+                </h6>
+                <span style="background:#fef3cd;color:#856404;padding:4px 12px;border-radius:12px;font-size:12px;font-weight:bold;">
+                    需要改进
+                </span>
+            </div>
+            
+            <p style="margin:10px 0;color:#333;font-weight:600;">
+                📌 修改方向：${item.direction}
+            </p>
+            
+            <div style="margin-top:15px;">
+                <p style="margin-bottom:10px;color:#666;font-weight:bold;">📚 参考案例：</p>
+                ${item.cases.map((case, caseIndex) => `
+                    <div style="margin-bottom:8px;padding:10px;background:#fff;border-radius:6px;border:1px solid #e0e0e0;">
+                        <span style="font-weight:bold;color:#667eea;">案例 ${caseIndex + 1}：</span>
+                        <span style="color:#333;">${case.content}</span>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `).join('');
+    
+    modificationListDiv.innerHTML = html;
 }
