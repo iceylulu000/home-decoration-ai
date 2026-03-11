@@ -13,6 +13,11 @@ function uploadProject() {
     const formData = new FormData();
     formData.append('file', fileInput.files[0]);
     
+    // 添加企业信息
+    formData.append('company_name', document.getElementById('companyName').value);
+    formData.append('project_type', document.getElementById('projectType').value);
+    formData.append('project_stage', document.getElementById('projectStage').value);
+    
     fetch('/upload_project', {
         method: 'POST',
         body: formData
@@ -53,12 +58,6 @@ function uploadProject() {
                     '</div>'
                 ).join('');
                 document.getElementById('tasksResult').style.display = 'block';
-            }
-            
-            // 同时更新教学端
-            const teachingMaterials = document.getElementById('teachingMaterials');
-            if (teachingMaterials) {
-                teachingMaterials.innerHTML = '<p>' + content + '</p>';
             }
         } else {
             resultArea.innerHTML = '<p style="color: red;">' + data.error + '</p>';
@@ -127,17 +126,18 @@ function generateMaterials() {
 
 function submitHomework() {
     const fileInput = document.getElementById('homeworkFile');
-    const resultArea = document.getElementById('feedback');
     
     if (fileInput.files.length === 0) {
-        resultArea.innerHTML = '<p style="color: red;">请先选择文件</p>';
+        alert('请先选择文件');
         return;
     }
     
-    resultArea.innerHTML = '<p>正在提交...</p>';
-    
     const formData = new FormData();
     formData.append('file', fileInput.files[0]);
+    
+    const submitBtn = document.getElementById('homeworkSubmitBtn');
+    submitBtn.disabled = true;
+    submitBtn.textContent = '提交中...';
     
     fetch('/submit_homework', {
         method: 'POST',
@@ -155,20 +155,41 @@ function submitHomework() {
                 }
             }
             
-            resultArea.innerHTML = '<h3>提交成功！</h3><p>' + (data.message || '作业提交成功') + '</p>';
+            alert('作业提交成功！');
+            
+            // 重置表单
+            document.getElementById('homeworkForm').reset();
+            const placeholder = document.querySelector('#homeworkUploadArea .upload-placeholder');
+            if (placeholder) {
+                placeholder.innerHTML = '<span class="upload-icon">📝</span><p>点击或拖拽作业文件到此处</p><p class="upload-hint">支持：任意格式文件（图片、视频、文档等）</p>';
+            }
+            submitBtn.disabled = true;
+            
+            // 更新提交列表
+            fetch('/get_state')
+                .then(res => res.json())
+                .then(state => {
+                    workflowState = state;
+                    renderSubmissions(state.submissions);
+                });
         } else {
-            resultArea.innerHTML = '<p style="color: red;">' + data.error + '</p>';
+            alert('提交失败: ' + data.error);
         }
     })
     .catch(error => {
-        resultArea.innerHTML = '<p style="color: red;">提交失败：' + error + '</p>';
+        alert('提交失败: ' + error.message);
+    })
+    .finally(() => {
+        submitBtn.disabled = false;
+        submitBtn.textContent = '提交作业';
     });
 }
 
-// ===== 页面初始化 =====
+// ===== 全局变量 =====
 let currentStage = 1;
 let workflowState = null;
 
+// ===== 页面初始化 =====
 document.addEventListener('DOMContentLoaded', () => {
     console.log('页面加载完成');
     
@@ -184,15 +205,35 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('获取状态失败:', error);
         });
     
-    // 项目上传相关
+    // ========== 项目上传相关 ==========
     const projectUploadArea = document.getElementById('projectUploadArea');
     const projectFile = document.getElementById('projectFile');
+    const projectSubmitBtn = document.getElementById('projectSubmitBtn');
+    const projectForm = document.getElementById('projectForm');
     
+    // 企业信息相关
+    const companyNameInput = document.getElementById('companyName');
+    const projectTypeSelect = document.getElementById('projectType');
+    const projectStageSelect = document.getElementById('projectStage');
+    
+    // 检查项目表单
+    function checkProjectForm() {
+        const file = projectFile.files[0];
+        const companyName = companyNameInput ? companyNameInput.value : '';
+        const projectType = projectTypeSelect ? projectTypeSelect.value : '';
+        const projectStage = projectStageSelect ? projectStageSelect.value : '';
+        if (projectSubmitBtn) {
+            projectSubmitBtn.disabled = !file || !companyName || !projectType || !projectStage;
+        }
+    }
+    
+    // 项目上传区域点击
     if (projectUploadArea && projectFile) {
         projectUploadArea.addEventListener('click', () => {
             projectFile.click();
         });
         
+        // 文件选择变化
         projectFile.addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (file) {
@@ -200,9 +241,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (placeholder) {
                     placeholder.innerHTML = '<span class="upload-icon">📄</span><p>' + file.name + '</p>';
                 }
+                checkProjectForm();
             }
         });
         
+        // 拖拽相关
         projectUploadArea.addEventListener('dragover', (e) => {
             e.preventDefault();
             projectUploadArea.style.background = '#f0f4ff';
@@ -222,19 +265,37 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (placeholder) {
                     placeholder.innerHTML = '<span class="upload-icon">📄</span><p>' + file.name + '</p>';
                 }
+                checkProjectForm();
             }
         });
     }
     
-    // 作业上传相关
+    // 监听企业信息输入
+    if (companyNameInput) companyNameInput.addEventListener('input', checkProjectForm);
+    if (projectTypeSelect) projectTypeSelect.addEventListener('change', checkProjectForm);
+    if (projectStageSelect) projectStageSelect.addEventListener('change', checkProjectForm);
+    
+    // 项目表单提交
+    if (projectForm) {
+        projectForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            uploadProject();
+        });
+    }
+    
+    // ========== 作业上传相关 ==========
     const homeworkUploadArea = document.getElementById('homeworkUploadArea');
     const homeworkFile = document.getElementById('homeworkFile');
+    const homeworkSubmitBtn = document.getElementById('homeworkSubmitBtn');
+    const homeworkForm = document.getElementById('homeworkForm');
     
+    // 作业上传区域点击
     if (homeworkUploadArea && homeworkFile) {
         homeworkUploadArea.addEventListener('click', () => {
             homeworkFile.click();
         });
         
+        // 文件选择变化
         homeworkFile.addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (file) {
@@ -242,10 +303,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (placeholder) {
                     placeholder.innerHTML = '<span class="upload-icon">📝</span><p>' + file.name + '</p>';
                 }
-                document.getElementById('homeworkSubmitBtn').disabled = false;
+                if (homeworkSubmitBtn) {
+                    homeworkSubmitBtn.disabled = false;
+                }
             }
         });
         
+        // 拖拽相关
         homeworkUploadArea.addEventListener('dragover', (e) => {
             e.preventDefault();
             homeworkUploadArea.style.background = '#f0f4ff';
@@ -265,12 +329,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (placeholder) {
                     placeholder.innerHTML = '<span class="upload-icon">📝</span><p>' + file.name + '</p>';
                 }
-                document.getElementById('homeworkSubmitBtn').disabled = false;
+                if (homeworkSubmitBtn) {
+                    homeworkSubmitBtn.disabled = false;
+                }
             }
         });
     }
     
-    // Tab切换
+    // 作业表单提交
+    if (homeworkForm) {
+        homeworkForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            submitHomework();
+        });
+    }
+    
+    // ========== Tab切换 ==========
     document.querySelectorAll('.stage-tab').forEach(tab => {
         tab.addEventListener('click', () => {
             const stage = parseInt(tab.dataset.stage);
@@ -286,32 +360,6 @@ document.addEventListener('DOMContentLoaded', () => {
 function goToStage2() {
     currentStage = 2;
     updateStageDisplay();
-    
-    // 在教学端显示课程内容和任务列表
-    if (workflowState && workflowState.course_content) {
-        const courseContent2 = document.getElementById('courseContent2');
-        const courseResult2 = document.getElementById('courseResult2');
-        if (courseContent2 && courseResult2) {
-            courseContent2.innerHTML = '<p>' + workflowState.course_content + '</p>';
-            courseResult2.style.display = 'block';
-        }
-    }
-    
-    if (workflowState && workflowState.student_tasks) {
-        const tasksList2 = document.getElementById('tasksList2');
-        const tasksResult2 = document.getElementById('tasksResult2');
-        if (tasksList2 && tasksResult2) {
-            tasksList2.innerHTML = workflowState.student_tasks.map(task => 
-                '<div class="task-item">' +
-                    '<div class="task-id">' + (task['任务ID'] || task.id) + '</div>' +
-                    '<div class="task-name">' + (task['任务名称'] || task.title) + '</div>' +
-                    '<div class="task-desc">' + (task['任务描述'] || task.description) + '</div>' +
-                    '<div class="task-meta"><span>难度: ' + (task['难度'] || task.difficulty || '中等') + '</span> | <span>截止时间: ' + (task['截止时间'] || task.deadline || '1周后') + '</span></div>' +
-                '</div>'
-            ).join('');
-            tasksResult2.style.display = 'block';
-        }
-    }
 }
 
 function goToStage3() {
@@ -335,6 +383,34 @@ function updateStageDisplay() {
     }
 }
 
+// ===== 渲染提交列表 =====
+function renderSubmissions(submissions) {
+    const submissionsList = document.getElementById('submissionsList');
+    const submissionsResult = document.getElementById('submissionsResult');
+    
+    if (!submissionsList) {
+        console.error('submissionsList 元素不存在');
+        return;
+    }
+    
+    if (!submissions || submissions.length === 0) {
+        submissionsList.innerHTML = '<p style="text-align:center;color:#999;">暂无提交</p>';
+        return;
+    }
+    
+    submissionsList.innerHTML = submissions.map(sub => 
+        '<div class="submission-item">' +
+            '<div class="submission-file">文件: ' + sub.filename + '</div>' +
+            '<div class="submission-time">提交时间: ' + sub.submit_time + '</div>' +
+            (sub.ai_feedback ? '<div class="submission-feedback">🤖 AI评价: ' + sub.ai_feedback.substring(0, 50) + '...</div>' : '') +
+        '</div>'
+    ).join('');
+    
+    if (submissionsResult) {
+        submissionsResult.style.display = 'block';
+    }
+}
+
 // ===== 报告生成 =====
 function generateReport() {
     if (!workflowState || !workflowState.submissions || workflowState.submissions.length === 0) {
@@ -355,11 +431,10 @@ function generateReport() {
     .then(data => {
         if (data.success) {
             reportContent.innerHTML = '<pre style="white-space: pre-wrap; font-family: inherit;">' + data.report + '</pre>';
-            document.getElementById('reportResult').style.display = 'block';
-            
-            // 标记tab2为完成
-            const tab2 = document.getElementById('tab2');
-            if (tab2) tab2.classList.add('completed');
+            const reportResult = document.getElementById('reportResult');
+            if (reportResult) {
+                reportResult.style.display = 'block';
+            }
         } else {
             reportContent.innerHTML = '<p style="color: red;">生成失败: ' + data.error + '</p>';
         }
