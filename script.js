@@ -375,7 +375,7 @@ function updateStageDisplay() {
     }
 }
 
-// ===== 初始化作业上传（可在切换Tab时调用）=====
+// ===== 初始化作业上传 =====
 function initHomeworkUpload() {
     console.log('[DEBUG] initHomeworkUpload 被调用');
     const homeworkUploadArea = document.getElementById('homeworkUploadArea');
@@ -387,22 +387,26 @@ function initHomeworkUpload() {
         return;
     }
 
-    console.log('[DEBUG] 重新绑定作业上传事件');
+    console.log('[DEBUG] 开始绑定作业上传事件');
 
-    // 使用事件委托来处理拖拽，避免重复绑定
-    homeworkUploadArea.onclick = function(e) {
+    // 清除所有现有的事件监听器
+    const newUploadArea = homeworkUploadArea.cloneNode(true);
+    homeworkUploadArea.parentNode.replaceChild(newUploadArea, homeworkUploadArea);
+    const finalUploadArea = document.getElementById('homeworkUploadArea');
+
+    // 点击上传区域触发文件选择
+    finalUploadArea.addEventListener('click', (e) => {
         console.log('[DEBUG] 上传区域被点击');
-        e.preventDefault();
         homeworkFile.click();
-    };
+    });
 
     // 文件选择变化
-    homeworkFile.onchange = function(e) {
+    homeworkFile.addEventListener('change', (e) => {
         console.log('[DEBUG] 文件选择变化事件触发');
         const file = e.target.files[0];
         console.log('[DEBUG] 选择的文件:', file);
         if (file) {
-            const placeholder = homeworkUploadArea.querySelector('.upload-placeholder');
+            const placeholder = finalUploadArea.querySelector('.upload-placeholder');
             if (placeholder) {
                 placeholder.innerHTML = '<span class="upload-icon">📝</span><p>' + file.name + '</p>';
             }
@@ -411,64 +415,74 @@ function initHomeworkUpload() {
                 homeworkSubmitBtn.disabled = false;
             }
         }
-    };
+    });
 
-    // 拖拽相关 - 使用自定义属性标记是否已绑定
-    if (!homeworkUploadArea.hasAttribute('data-drag-bound')) {
-        homeworkUploadArea.setAttribute('data-drag-bound', 'true');
+    // 拖拽进入
+    finalUploadArea.addEventListener('dragenter', (e) => {
+        console.log('[DEBUG] dragenter 事件触发');
+        e.preventDefault();
+        e.stopPropagation();
+        finalUploadArea.classList.add('drag-over');
+    });
 
-        homeworkUploadArea.addEventListener('dragover', (e) => {
-            console.log('[DEBUG] dragover 事件触发');
-            e.preventDefault();
-            e.stopPropagation();
-            homeworkUploadArea.classList.add('drag-over');
-        });
+    // 拖拽经过
+    finalUploadArea.addEventListener('dragover', (e) => {
+        console.log('[DEBUG] dragover 事件触发');
+        e.preventDefault();
+        e.stopPropagation();
+        finalUploadArea.classList.add('drag-over');
+    });
 
-        homeworkUploadArea.addEventListener('dragleave', (e) => {
-            console.log('[DEBUG] dragleave 事件触发');
-            e.preventDefault();
-            e.stopPropagation();
-            // 只有离开上传区域时才移除样式
-            if (!homeworkUploadArea.contains(e.relatedTarget)) {
-                homeworkUploadArea.classList.remove('drag-over');
+    // 拖拽离开
+    finalUploadArea.addEventListener('dragleave', (e) => {
+        console.log('[DEBUG] dragleave 事件触发');
+        e.preventDefault();
+        e.stopPropagation();
+        // 检查是否真正离开了上传区域
+        if (!finalUploadArea.contains(e.relatedTarget)) {
+            finalUploadArea.classList.remove('drag-over');
+        }
+    });
+
+    // 拖拽放下
+    finalUploadArea.addEventListener('drop', (e) => {
+        console.log('[DEBUG] drop 事件触发');
+        e.preventDefault();
+        e.stopPropagation();
+        finalUploadArea.classList.remove('drag-over');
+
+        const files = e.dataTransfer.files;
+        console.log('[DEBUG] 拖拽的文件数量:', files.length);
+
+        if (files && files.length > 0) {
+            const file = files[0];
+            console.log('[DEBUG] 拖拽的文件:', file.name);
+
+            // 设置文件到 input
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(file);
+            homeworkFile.files = dataTransfer.files;
+
+            const placeholder = finalUploadArea.querySelector('.upload-placeholder');
+            if (placeholder) {
+                placeholder.innerHTML = '<span class="upload-icon">📝</span><p>' + file.name + '</p>';
             }
-        });
-
-        homeworkUploadArea.addEventListener('drop', (e) => {
-            console.log('[DEBUG] drop 事件触发');
-            e.preventDefault();
-            e.stopPropagation();
-            homeworkUploadArea.classList.remove('drag-over');
-
-            const files = e.dataTransfer.files;
-            console.log('[DEBUG] 拖拽的文件数量:', files.length);
-
-            if (files && files.length > 0) {
-                const file = files[0];
-                console.log('[DEBUG] 拖拽的文件:', file.name);
-
-                // 设置文件到 input
-                const dataTransfer = new DataTransfer();
-                dataTransfer.items.add(file);
-                homeworkFile.files = dataTransfer.files;
-
-                const placeholder = homeworkUploadArea.querySelector('.upload-placeholder');
-                if (placeholder) {
-                    placeholder.innerHTML = '<span class="upload-icon">📝</span><p>' + file.name + '</p>';
-                }
-                if (homeworkSubmitBtn) {
-                    console.log('[DEBUG] 启用提交按钮');
-                    homeworkSubmitBtn.disabled = false;
-                }
-
-                console.log('[DEBUG] 文件已设置，current files:', homeworkFile.files);
+            if (homeworkSubmitBtn) {
+                console.log('[DEBUG] 启用提交按钮');
+                homeworkSubmitBtn.disabled = false;
             }
-        });
 
-        console.log('[DEBUG] 作业上传拖拽事件绑定完成');
-    } else {
-        console.log('[DEBUG] 拖拽事件已存在，跳过绑定');
-    }
+            console.log('[DEBUG] 文件已设置，input files:', homeworkFile.files.length);
+        }
+    });
+
+    // 防止默认的拖拽行为
+    finalUploadArea.addEventListener('dragstart', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+    });
+
+    console.log('[DEBUG] 作业上传事件绑定完成');
 }
 
 // ===== 渲染提交列表 =====
