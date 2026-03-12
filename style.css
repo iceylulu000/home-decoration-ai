@@ -162,35 +162,45 @@ header h1 {
     padding: 40px;
     text-align: center;
     cursor: pointer;
-    transition: all 0.3s;
+    transition: all 0.3s ease;
     background: #f8f9fa;
     margin-bottom: 25px;
     position: relative;
-    z-index: 1;
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
 }
 
 .upload-area:hover {
     background: #f0f4ff;
     border-color: #764ba2;
+    transform: translateY(-2px);
 }
 
 .upload-area.drag-over {
-    background: #e8f0fe;
-    border-color: #667eea;
-    border-style: solid;
-    transform: scale(1.02);
+    background: #e8f0fe !important;
+    border: 3px solid #667eea !important;
+    border-style: solid !important;
+    transform: scale(1.03);
+    box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
 }
 
 .upload-placeholder {
     pointer-events: none;
     position: relative;
-    z-index: -1;
+    z-index: 1;
 }
 
 .upload-icon {
     font-size: 3rem;
     display: block;
     margin-bottom: 10px;
+    transition: transform 0.3s ease;
+}
+
+.upload-area.drag-over .upload-icon {
+    transform: scale(1.2);
 }
 
 .upload-hint {
